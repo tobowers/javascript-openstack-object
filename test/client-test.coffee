@@ -16,7 +16,8 @@ vows.describe('Client').addBatch(
             topic: (client) ->
                 client.setAuth(@callback)
                 console.log("setting auth")
-            "should log": (err, response, body) ->
+            "should not error": (err, response, body) ->
+                assert.isNull(err)
                 console.log("called test")
             
 ).export module

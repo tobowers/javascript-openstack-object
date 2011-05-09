@@ -32,7 +32,7 @@ class Client
         203: "Non-authoritative information",
         204: "No content",
         
-    _setStorageUrlsFromRequest (response) =>
+    _setStorageUrlsFromRequest: (response) =>
         console.log("got response: ", response)
         
     setAuth: (callback) ->
@@ -44,7 +44,8 @@ class Client
                 'X-Auth-Key': @auth.apiKey
         Request authOptions, (err, res, body) =>
             statusCode = res.statusCode
-            callback(new BadAuthError(body)) if @failCodes[statusCode]
+            console.log("status code: ", statusCode)
+            return callback(new BadAuthError(body)) if @failCodes[statusCode]
             @_setStorageUrlsFromRequest(res) if @successCodes[statusCode]
             callback(null, res)
         
