@@ -1,0 +1,13 @@
+{
+  "name"          : "js-openstack",
+  "description"   : "Library for accessing openstack object store",
+  "url"           : "",
+  "keywords"      : ["cloudfiles", "swift", "openstack", "objectstore", "client"],
+  "author"        : "Topper Bowers <topper@toppingdesign.com>",
+  "contributors"  : [],
+  "dependencies"  : {"request": "", "coffee-script": ""},
+  "main"          : "./lib/bootstrap",
+  "directories"   : { "test": "./test" },
+  "version"       : "0.0.1",
+  "engines"       : {"node": ">=0.4.5"}
+}
