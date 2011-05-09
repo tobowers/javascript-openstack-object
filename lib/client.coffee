@@ -65,6 +65,9 @@ class Client extends EventEmitter
         
     makeRequest: (method, uri, body, headers, callback) =>
         
+    _storagUrlFor: (path) ->
+        "#{@storageUrl}/#{path}"
+        
 class Client.ObjectStoreError
     constructor: (@message) ->
 
