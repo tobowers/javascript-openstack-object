@@ -2,15 +2,11 @@ require.paths.unshift(require('path').join(__dirname, '.'))
 
 Request = require "request"
 url = require "url"
+EventEmitter = require("events").EventEmitter
 
 defaultAuthUrl = "https://secure.motionbox.com/auth/v1.0"
 
-class ObjectStoreError
-    constructor: (@message) ->
-    
-class BadAuthError extends ObjectStoreError
-
-class Client
+class Client extends EventEmitter
     constructor: (@auth) ->
         @isAuthorized = false
         @requestQueue = []
@@ -36,6 +32,7 @@ class Client
         headers = response.headers
         @storageUrl = headers['x-storage-url']
         @storageToken = headers['x-storage-token'] || headers['x-auth-token']
+        @isAuthorized = true
         
     setAuth: (callback) ->
         authOptions =
@@ -44,11 +41,14 @@ class Client
                 HOST: url.parse(@auth.authUrl).host
                 'X-Storage-User': @auth.username
                 'X-Auth-Key': @auth.apiKey
+                
+        @emit("authorizationRequest")        
         Request authOptions, (err, res, body) =>
             statusCode = res.statusCode
-            console.log("status code: ", statusCode)
-            return callback(new BadAuthError(body)) if @failCodes[statusCode]
+            return callback(new Client.BadAuthError(body)) if @failCodes[statusCode]
+            
             @_setStorageUrlsFromRequest(res) if @successCodes[statusCode]
+            @emit("authorized", this)
             callback(null, res)
         
     queueOrMakeRequest: (method, uri, body, headers, callback) =>
@@ -65,7 +65,10 @@ class Client
         
     makeRequest: (method, uri, body, headers, callback) =>
         
-        
+class Client.ObjectStoreError
+    constructor: (@message) ->
+
+class Client.BadAuthError extends Client.ObjectStoreError        
 
 Client.create = (auth) ->
     new Client(auth)
