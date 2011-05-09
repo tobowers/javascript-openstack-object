@@ -2,7 +2,7 @@ vows = require 'vows'
 assert = require 'assert'
 Client = require './../lib/main'
 
-authInfo = {authUrl: 'https://secure.motionbox.com/auth/v1.0', username: "blah:blah", apiKey: "blah"}
+authInfo = require './credentials'
 
 vows.describe('Client').addBatch(
     "client initialization":
@@ -15,9 +15,7 @@ vows.describe('Client').addBatch(
         "setting auth": 
             topic: (client) ->
                 client.setAuth(@callback)
-                console.log("setting auth")
             "should not error": (err, response, body) ->
                 assert.isNull(err)
-                console.log("called test")
             
 ).export module

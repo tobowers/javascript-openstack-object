@@ -33,7 +33,9 @@ class Client
         204: "No content",
         
     _setStorageUrlsFromRequest: (response) =>
-        console.log("got response: ", response)
+        headers = response.headers
+        @storageUrl = headers['x-storage-url']
+        @storageToken = headers['x-storage-token'] || headers['x-auth-token']
         
     setAuth: (callback) ->
         authOptions =
