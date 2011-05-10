@@ -67,7 +67,7 @@ vows.describe('Client').addBatch(
                      "should be able to delete it":
                          topic: (container, client) ->
                              callback = @callback
-                             client.deleteContainer "testContainerName", (err, result) ->
+                             client.destroyContainer "testContainerName", (err, result) ->
                                  return callback(err) if err
                                  client.getContainer "testContainerName", callback
                              return

@@ -83,20 +83,17 @@ class Client extends EventEmitter
         uri = @storageUrlFor(path) unless path[0] == "/"
         @queueOrMakeRequest(method, uri, body, headers, callback)
         
-    getContainer: (name, callback) =>
-        @queueOrMakeRequest "GET", @storageUrlFor(name), null, null, (err, response) =>
-            return callback(err) if err
-            callback(null, new Container(name, this, response))
+    getContainer: (name, callback, loadFromServer) =>
+        loadFromServer ?= true
+        container = new Container(name, this)
+        container.reload(callback) if loadFromServer
             
-    deleteContainer: (name, callback) =>
-        @queueOrMakeRequest "DELETE", @storageUrlFor(name), null, null, (err, response) =>
-             return callback(err) if err
-             callback(null, true)
-
+    destroyContainer: (name, callback) =>
+        container = new Container(name, this)
+        container.destroy(callback)
+        
     createContainer: (name, callback) =>
-        @queueOrMakeRequest "PUT", @storageUrlFor(name), null, null, (err, response) =>
-            return callback(err) if err
-            callback(null, new Container(name, this, response))
+        Container.create(name, this, callback)
         
     makeRequest: (method, uri, body, headers, callback) =>
         headers ?= {}
