@@ -1,8 +1,10 @@
 require.paths.unshift(require('path').join(__dirname, '.'))
+version = require "version"
 
 Request = require "request"
 url = require "url"
 EventEmitter = require("events").EventEmitter
+Container = require "container"
 
 defaultAuthUrl = "https://secure.motionbox.com/auth/v1.0"
 
@@ -38,7 +40,7 @@ class Client extends EventEmitter
         authOptions =
             uri: @auth.authUrl
             headers:
-                HOST: url.parse(@auth.authUrl).host
+                #HOST: url.parse(@auth.authUrl).host
                 'X-Storage-User': @auth.username
                 'X-Auth-Key': @auth.apiKey
                 
@@ -50,6 +52,19 @@ class Client extends EventEmitter
             @_setStorageUrlsFromRequest(res) if @successCodes[statusCode]
             @emit("authorized", this)
             callback(null, res)
+            if @requestQueue.length > 0
+                for req in @requestQueue
+                    do (req) =>
+                        @makeRequest(req.method, req.uri, req.body, req.headers, req.callback)
+                    
+            
+    getInfo: (callback) ->
+        @storageRequest("HEAD", "", null, null, (err, response, body) =>
+            return callback(err) if err
+            @bytes = new Number(response.headers["x-account-bytes-used"])
+            @count = new Number(response.headers["x-account-container-count"])
+            callback(null, {bytes: @bytes, count: @count})
+        ) 
         
     queueOrMakeRequest: (method, uri, body, headers, callback) =>
         if @isAuthorized
@@ -62,16 +77,61 @@ class Client extends EventEmitter
                 headers: headers,
                 callback: callback
             })
+    
+    storageRequest: (method, path, body, headers, callback) =>
+        uri = path
+        uri = @storageUrlFor(path) unless path[0] == "/"
+        @queueOrMakeRequest(method, uri, body, headers, callback)
+        
+    getContainer: (name, callback) =>
+        @queueOrMakeRequest "GET", @storageUrlFor(name), null, null, (err, response) =>
+            return callback(err) if err
+            callback(null, new Container(name, this, response))
+            
+    deleteContainer: (name, callback) =>
+        @queueOrMakeRequest "DELETE", @storageUrlFor(name), null, null, (err, response) =>
+             return callback(err) if err
+             callback(null, true)
+
+    createContainer: (name, callback) =>
+        @queueOrMakeRequest "PUT", @storageUrlFor(name), null, null, (err, response) =>
+            return callback(err) if err
+            callback(null, new Container(name, this, response))
         
     makeRequest: (method, uri, body, headers, callback) =>
-        
-    _storagUrlFor: (path) ->
+        headers ?= {}
+        headers["X-Auth-Token"] = @storageToken
+        headers["X-Storage-Token"] = @storageToken
+        headers["User-Agent"] = "Javascript Open Stack API Client #{version}"
+        options =
+            method: method
+            uri: uri
+            headers: headers
+            callback: (err, response, body) =>
+                return callback(new Client.BadRequest(err)) if err
+                statusCode = response.statusCode
+                if statusCode.toString() == "401"
+                    return @_handleUnauthorizedRequest(method, path, body, headers, callback)
+                if @failCodes[statusCode]
+                    callback(new Client.BadRequest(response, statusCode))
+                else
+                    callback(null, response, body)
+        Request(options)
+            
+    _handleUnauthorizedRequest: (method, path, body, headers, callback) =>
+        @setAuth (err, auth) ->
+            return callback(new Client.BadAuthError(err)) if err
+            @makeRequest(method, path, body, headers, callback)
+            
+    storageUrlFor: (path) ->
         "#{@storageUrl}/#{path}"
         
-class Client.ObjectStoreError
-    constructor: (@message) ->
+class Client.ObjectStoreError extends Error
+    constructor: (@message, @statusCode) ->
 
-class Client.BadAuthError extends Client.ObjectStoreError        
+class Client.BadAuthError extends Client.ObjectStoreError 
+    
+class Client.BadRequest extends Client.ObjectStoreError       
 
 Client.create = (auth) ->
     new Client(auth)
