@@ -1,51 +1,53 @@
+Client = require("./client") #incase we need the error definitions
 
 class Container
     constructor: (@name, @client, response) ->
         @metadata = {}
+        @bytes = 0
+        @count = 0
         @parseHeadResponse(response) if response
 
     reload: (callback) =>
-        @client.storageRequest "HEAD", @name, null, null, (err, response) =>
+        @client.storageRequest "HEAD", @escapedName(), null, null, (err, response) =>
             return callback(err) if err
             @parseHeadResponse(response)
             callback(null, this)
             
     destroy: (callback) =>
-        @client.storageRequest "DELETE", @name, null, null, (err, response) =>
+        @client.storageRequest "DELETE", @escapedName(), null, null, (err, response) =>
             return callback(err) if err
             callback(null, this)
-    #     
-    # getContainer: (name, callback) =>
-    #     @queueOrMakeRequest "GET", @storageUrlFor(name), null, null, (err, response) =>
-    #         return callback(err) if err
-    #         callback(null, new Container(name, this, response))
-    # 
-    # deleteContainer: (name, callback) =>
-    #     @queueOrMakeRequest "DELETE", @storageUrlFor(name), null, null, (err, response) =>
-    #          return callback(err) if err
-    #          callback(null, true)
-    # 
-    # createContainer: (name, callback) =>
-    #     @queueOrMakeRequest "PUT", @storageUrlFor(name), null, null, (err, response) =>
-    #         return callback(err) if err
-    #         callback(null, new Container(name, this, response))
+            
+    setMetadata: (hsh, callback) =>
+        hsh ?= {}
+        @metadata = hsh
+        headers = {}
+        for own key, value of hsh
+            do (key, value) ->
+                headers["x-container-meta-#{escape(key)}"] = escape(value)
+        @client.storageRequest "POST", @escapedName(), null, headers, (err, response) =>
+            return callback(err) if err
+            callback(null, this)
+
+    escapedName: =>
+        escape(@name)
 
     parseHeadResponse: (response) =>
         headers = response.headers
-        @bytes = headers["x-container-bytes-used"]
-        @count = headers["x-container-object-count"]
+        @bytes = new Number(headers["x-container-bytes-used"]) if headers["x-container-bytes-used"]?
+        @count = new Number(headers["x-container-object-count"]) if headers["x-container-object-count"]?
         @containerRead = headers["x-container-read"]
         @containerWrite = headers["x-container-write"]
-        for own header, value in headers
+        for own header, value of headers
             do (header, value) =>
                 if match = header.match(/^x-container-meta-(.+)/)
-                    @metadata[match[1]] = value
+                    @metadata[unescape(match[1])] = unescape(value)
         
         
 Container.create = (name, client, callback) ->
-    client.storageRequest "PUT", name, null, null, (err, response) =>
+    client.storageRequest "PUT", escape(name), null, null, (err, response) =>
         return callback(err) if err
-        callback(null, new Container(name, this, response))
+        callback(null, new Container(name, client, response))
             
 module.exports = Container
         
