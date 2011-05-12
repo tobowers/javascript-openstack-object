@@ -1,30 +1,38 @@
 vows = require 'vows'
 assert = require 'assert'
-Client = require './../lib/main'
-Container = require './../lib/container'
+Storage = require './../lib/main'
+TestCleaner = require './test_cleaner'
 
 goodCredentials = require('./credentials').good
 badCredentials = require("./credentials").bad
 
 testContainerName = "containerTestContainer"
+testObjectName = "containerTestObject.txt"
+
+testCleaner = TestCleaner.initialize {objects: ["#{testContainerName}/#{testObjectName}"], containers: [testContainerName]}
+
+client = Storage.Client.create(goodCredentials)
 
 vows.describe('Container').addBatch(
+    "test cleaner":
+        topic: ->
+            testCleaner.clean(@callback)
+            return
+        "should work": (err, result) ->
+            assert.isNull(err)
+).addBatch(
     "after authing":
         topic: ->
-            client = Client.create(goodCredentials)
-            callback = @callback
-            client.setAuth (err, auth) ->
-                callback(err, client)
+            client.setAuth @callback
             return
         "should be able to create a container":
-            topic: (client) ->
-               callback = @callback
-               Container.create(testContainerName, client, callback)
+            topic: () ->
+               Storage.Container.create(testContainerName, client, @callback)
                return
             "should not error": (err, container) ->
                 assert.isNull(err)
             "should return a container": (err, container) ->
-                assert.instanceOf(container, Container)
+                assert.instanceOf(container, Storage.Container)
             "container should have object count": (err, container) ->
                 assert.equal(container.count, 0)
                 
@@ -43,12 +51,10 @@ vows.describe('Container').addBatch(
                  
 ).addBatch(
     "after authing and creating a container":
-        topic: ->
-            client = Client.create(goodCredentials)
+        topic: ->   
             callback = @callback
             client.setAuth (err, auth) ->
-                return callback(err) if err
-                Container.create(testContainerName, client, callback)
+                Storage.Container.create(testContainerName, client, callback)
             return
             
         "deleting the container":
@@ -58,10 +64,10 @@ vows.describe('Container').addBatch(
             "should not error": (err, container) ->
                 assert.isNull(err)
             "should return the container": (err, container) ->
-                assert.instanceOf(container, Container)
+                assert.instanceOf(container, Storage.Container)
             "and then doing a get container":
                 topic: (container) ->
-                    client = Client.create(goodCredentials)
+                    client = Storage.Client.create(goodCredentials)
                     callback = @callback
                     client.setAuth (err, auth) ->
                         return callback(err) if err
@@ -70,4 +76,34 @@ vows.describe('Container').addBatch(
                 "should return a 404": (err, container) ->
                     assert.equal(err.statusCode, "404")
             
+).addBatch(
+    "testing StorageObject methods":
+        topic: ->
+            callback = @callback
+            client.setAuth (err, auth) ->
+                return callback(err) if err
+                Storage.Container.create(testContainerName, client, callback)
+            return
+        "object creation":
+            topic: (container) ->
+                callback = @callback
+                # container.createObject(testObjectName, (err, obj) ->
+                #     console.log("err %o obj %o", err, obj)
+                #     callback(err, obj)
+                # )
+                container.createObject(testObjectName, @callback)
+                return
+            "should not error": (err, storageObject) ->
+                assert.isNull(err)
+            "should return a storage object": (err, storageObject) ->
+                assert.instanceOf(storageObject, Storage.StorageObject)
+            "listing the objects":
+                topic: (storageObject) ->
+                    storageObject.container.objects(@callback)
+                    return
+                "should return an array": (err, objects) ->
+                    assert.isArray(objects)
+                "should include the testObject": (err, objects) ->
+                    assert.include(objects, testObjectName)
+                
 ).export(module)

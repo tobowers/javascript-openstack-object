@@ -5,6 +5,8 @@ Request = require "request"
 url = require "url"
 EventEmitter = require("events").EventEmitter
 Container = require "container"
+StorageError = require "errors"
+Utils = require 'utils'
 
 defaultAuthUrl = "https://secure.motionbox.com/auth/v1.0"
 
@@ -47,7 +49,7 @@ class Client extends EventEmitter
         @emit("authorizationRequest")        
         Request authOptions, (err, res, body) =>
             statusCode = res.statusCode
-            return callback(new Client.BadAuthError(body)) if @failCodes[statusCode]
+            return callback(new StorageError.BadAuthError(body)) if @failCodes[statusCode]
             
             @_setStorageUrlsFromRequest(res) if @successCodes[statusCode]
             @emit("authorized", this)
@@ -100,35 +102,45 @@ class Client extends EventEmitter
         headers["X-Auth-Token"] = @storageToken
         headers["X-Storage-Token"] = @storageToken
         headers["User-Agent"] = "Javascript Open Stack API Client #{version}"
+        console.log("requesting: #{method}", uri)
         options =
             method: method
             uri: uri
             headers: headers
             callback: (err, response, body) =>
-                return callback(new Client.BadRequest(err)) if err
+                return callback(new StorageError.BadRequest(err)) if err
                 statusCode = response.statusCode
-                if statusCode.toString() == "401"
-                    return @_handleUnauthorizedRequest(method, path, body, headers, callback)
+                return @_handleUnauthorizedRequest(method, uri, body, headers, callback) if statusCode.toString() == "401"
+                
                 if @failCodes[statusCode]
-                    callback(new Client.BadRequest(response, statusCode))
+                    callback(new StorageError.BadRequest(body, statusCode))
                 else
                     callback(null, response, body)
-        Request(options)
+                    
+        options.body = body if Utils.isString(body)            
+        
+        request = Request(options)
+        try
+            request.pipe(body) if body? and not Utils.isString(body)
+        catch error
+            callback(new Error.BadBodySpecified("a body was specified that was not a string or failed to pipe"))
+        return request
             
-    _handleUnauthorizedRequest: (method, path, body, headers, callback) =>
-        @setAuth (err, auth) ->
-            return callback(new Client.BadAuthError(err)) if err
-            @makeRequest(method, path, body, headers, callback)
+    _handleUnauthorizedRequest: (method, uri, body, headers, callback) =>
+        console.log("handling unauthroized request to: ", path)
+        retryCount = 0
+        getAuthAndUpRetry ->
+            return callback(new StorageError.BadAuthError(err)) if retryCount > 3
+            @setAuth (err, auth) ->
+                return getAuthAndUpRetry() if err
+                @makeRequest(method, uri, body, headers, callback)
+            retryCount++
+        getAuthAndUpRetry()
+        
             
     storageUrlFor: (path) ->
         "#{@storageUrl}/#{path}"
-        
-class Client.ObjectStoreError extends Error
-    constructor: (@message, @statusCode) ->
-
-class Client.BadAuthError extends Client.ObjectStoreError 
-    
-class Client.BadRequest extends Client.ObjectStoreError       
+          
 
 Client.create = (auth) ->
     new Client(auth)

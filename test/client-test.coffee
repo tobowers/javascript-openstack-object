@@ -1,17 +1,26 @@
 vows = require 'vows'
 assert = require 'assert'
-Client = require './../lib/main'
-Container = require './../lib/container'
+Storage = require './../lib/main'
+TestCleaner = require './test_cleaner'
 
 goodCredentials = require('./credentials').good
 badCredentials = require("./credentials").bad
 
 testContainerName = "clientTestContainer"
 
+testCleaner = TestCleaner.initialize {containers: [testContainerName]}
+
 vows.describe('Client').addBatch(
+    "test cleaner":
+        topic: ->
+            testCleaner.clean(@callback)
+            return
+        "should work": (err, result) ->
+            assert.isNull(err)
+).addBatch(
     "client initialization":
         topic: (topic) ->
-            Client.create(goodCredentials)
+            Storage.Client.create(goodCredentials)
         "should save the auth": (client) ->
             assert.equal(goodCredentials, client.auth)
         "should not be isAuthorized": (client) ->
@@ -53,7 +62,7 @@ vows.describe('Client').addBatch(
                          callback(err,container,client)
                      return
                  "should return a container": (err, container, client) ->
-                     assert.instanceOf(container, Container)
+                     assert.instanceOf(container, Storage.Container)
                  "should be able to get the container after":
                      topic: (container, client) ->
                          callback = @callback
@@ -63,7 +72,7 @@ vows.describe('Client').addBatch(
                      "should not error": (err, container) ->
                          assert.isNull(err)
                      "should give back a container": (err, container) ->
-                         assert.instanceOf(container, Container)
+                         assert.instanceOf(container, Storage.Container)
                      "should be able to delete it":
                          topic: (container, client) ->
                              callback = @callback
@@ -80,7 +89,7 @@ vows.describe('Client').addBatch(
 ).addBatch(
     "with bad credentials":
         topic: ->
-            Client.create(badCredentials)
+            Storage.Client.create(badCredentials)
         "setting auth":
             topic: (client) ->
                 callback = @callback
@@ -88,6 +97,6 @@ vows.describe('Client').addBatch(
                     callback(err, response, body, client)
                 return
             "should raise the BadAuthError": (err, response, body, client) ->
-                assert.instanceOf(err, Client.BadAuthError)
+                assert.instanceOf(err, Storage.Error.BadAuthError)
     
 ).export(module)

@@ -1,4 +1,19 @@
-Client = require("./client") #incase we need the error definitions
+StorageObject = require("./storage_object")
+Error = require("./errors")
+
+# def objects(params = {})
+# params[:marker] ||= params[:offset] unless params[:offset].nil?
+# query = []
+# params.each do |param, value|
+# if [:limit, :marker, :prefix, :path, :delimiter].include? param
+#   query << "#{param}=#{CloudFiles.escape(value.to_s)}"
+# end
+# end
+# response = self.connection.storage_request("GET", "#{escaped_name}?#{query.join '&'}")
+# return [] if (response.code == "204")
+# raise CloudFiles::Exception::InvalidResponse, "Invalid response code #{response.code}" unless (response.code == "200")
+# return CloudFiles.lines(response.body)
+# end
 
 class Container
     constructor: (@name, @client, response) ->
@@ -6,6 +21,7 @@ class Container
         @bytes = 0
         @count = 0
         @parseHeadResponse(response) if response
+        
 
     reload: (callback) =>
         @client.storageRequest "HEAD", @escapedName(), null, null, (err, response) =>
@@ -28,7 +44,30 @@ class Container
         @client.storageRequest "POST", @escapedName(), null, headers, (err, response) =>
             return callback(err) if err
             callback(null, this)
-
+    
+    createObject: (name, callback) =>
+        StorageObject.create(name, this, callback)
+    
+    destroyObject: (name, callback) =>
+        (new StorageObject(name, this, this.client)).destroy(callback)
+        
+    objects: (opts, callback) =>
+        if typeof opts == 'function'
+            callback = opts
+            opts = {}
+        opts ?= {}
+        query = []
+        allowedValues = ["limit", "marker", "prefix", "path", "delimiter"]
+        for own key, value of opts
+            do (key, value) ->
+                query.push "#{key}=#{escape(value)}" if allowedValues.indexOf(key) != -1
+    
+        @client.storageRequest "GET", "#{@escapedName()}?#{query.join("&")}", null, null, (err, response, body) ->
+            return callback(err) if err
+            return callback(null, []) if response.statusCode == "204"
+            callback(null, body.split("\n"))
+        
+    
     escapedName: =>
         escape(@name)
 
@@ -44,10 +83,10 @@ class Container
                     @metadata[unescape(match[1])] = unescape(value)
         
         
-Container.create = (name, client, callback) ->
-    client.storageRequest "PUT", escape(name), null, null, (err, response) =>
-        return callback(err) if err
-        callback(null, new Container(name, client, response))
+    @create = (name, client, callback) ->
+        client.storageRequest "PUT", escape(name), null, null, (err, response) ->
+            return callback(err) if err
+            callback(null, new Container(name, client, response))
             
 module.exports = Container
         
