@@ -11,4 +11,7 @@ class Error.InvalidResponse extends Error.ObjectStoreError
     
 class Error.BadBodySpecified extends Error.ObjectStoreError
 
+class Error.NoDataInWriteRequest extends Error.ObjectStoreError
+
+
 module.exports = Error

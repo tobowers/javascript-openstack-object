@@ -32,7 +32,21 @@ vows.describe('StorageObject').addBatch(
         "testing creating an object":
             topic: (container) ->
                 container.createObject(testObjectName, @callback)
+                return
             "should return a storage object": (err, obj) ->
                 assert.instanceOf(obj, Storage.StorageObject)
+                
+            "should be able to write a string":
+                topic: (storageObject) ->
+                    storageObject.write("oh hai", @callback)
+                    return
+                "should not error": (err, storageObject) ->
+                    assert.isNull(err)
+                "reading it back":
+                    topic: (storageObject) ->
+                        storageObject.data(@callback)
+                        return
+                    "should have the same data": (err, body) ->
+                        assert.equal(body, "oh hai")
                 
 ).export(module)
