@@ -5,6 +5,8 @@ Error = require('./errors')
 
 mime = require('mime')
 
+fs = require("fs")
+
 class StorageObject
             
     constructor: (@name, @container, @client, response) ->
@@ -23,29 +25,6 @@ class StorageObject
         @client.storageRequest "DELETE", @storagePath(), null, null, (err, response) =>
             return callback(err) if err
             callback(null, this)
-    ###
-        def write(data = nil, headers = {})
-          raise CloudFiles::Exception::Syntax, "No data or header updates supplied" if ((data.nil? && $stdin.tty?) and headers.empty?)
-          if headers['Content-Type'].nil?
-            type = MIME::Types.type_for(self.name).first.to_s
-            if type.empty?
-              headers['Content-Type'] = "application/octet-stream"
-            else
-              headers['Content-Type'] = type
-            end
-          end
-          # If we're taking data from standard input, send that IO object to cfreq
-          data = $stdin if (data.nil? && $stdin.tty? == false)
-          response = self.container.connection.storage_request("PUT", @storagepath, headers, data)
-          code = response.code
-          raise CloudFiles::Exception::InvalidResponse, "Invalid content-length header sent" if (code == "412")
-          raise CloudFiles::Exception::MisMatchedChecksum, "Mismatched etag" if (code == "422")
-          raise CloudFiles::Exception::InvalidResponse, "Invalid response code #{code}" unless (code =~ /^20./)
-          make_path(File.dirname(self.name)) if @make_path == true
-          self.refresh
-          true
-        end
-    ###
     
     write: (data, headersOrCallback, callback) =>
         return callback(new Error.NoDataInWriteRequest("No data or headers in write request")) unless data? or (typeof headersOrCallback == 'object')
@@ -61,17 +40,6 @@ class StorageObject
             return callback(err) if err
             callback(null, this)
     
-    ###
-            def data(size = -1, offset = 0, headers = {})
-          if size.to_i > 0
-            range = sprintf("bytes=%d-%d", offset.to_i, (offset.to_i + size.to_i) - 1)
-            headers['Range'] = range
-          end
-          response = self.container.connection.storage_request("GET", @storagepath, headers)
-          raise CloudFiles::Exception::NoSuchObject, "Object #{@name} does not exist" unless (response.code =~ /^20/)
-          response.body
-        end
-    ###
     data: (opts, callback) =>
         if typeof opts == 'function'
             callback = opts
@@ -84,6 +52,23 @@ class StorageObject
         @client.storageRequest "GET", @storagePath(), null, headers, (err, response, body) ->
             return callback(err) if err
             callback(null, body)
+    
+    saveToFile: (path, callback) =>
+        request = @client.storageRequest "GET", @storagePath(), null, null, (err, response) =>
+            return callback(err) if err
+            callback(null, this)
+        request.pipe(fs.createWriteStream(path))
+            
+    writeFromFile: (path, headersOrCallback, callback) =>
+        if typeof headersOrCallback == 'function'
+            callback = headersOrCallback
+            headers = {}
+        else
+            headers = headersOrCallback
+        request = @client.storageRequest "PUT", @storagePath(), null, headers, (err, response, body) =>
+            return callback(err) if err
+            callback(null, this)
+        fs.createReadStream(path).pipe(request)        
             
     escapedName: =>
         escape(@name)

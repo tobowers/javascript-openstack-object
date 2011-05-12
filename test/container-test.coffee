@@ -36,7 +36,7 @@ vows.describe('Container').addBatch(
             "container should have object count": (err, container) ->
                 assert.equal(container.count, 0)
                 
-            "and when setting metadata":
+            "when setting metadata":
                 topic: (container) ->
                     callback = @callback
                     container.setMetadata {"oh hi long metadata": "testValue"}, (err, container) ->
@@ -46,7 +46,24 @@ vows.describe('Container').addBatch(
                     return
                 "should have the new metadata": (err, container) ->
                     assert.equal(container.metadata["oh hi long metadata"], "testValue")
-                    
+            "when setting readAcl":
+                topic: (container) ->
+                    callback = @callback
+                    container.setReadAcl "r:*", (err, container) ->
+                        return callback(err) if err
+                        container.reload(callback)
+                    return
+                "should update the acl": (err, container) ->
+                    assert.equal(container.readAcl, "r:*")
+            "and when setting writeAcl":
+                topic: (container) ->
+                    callback = @callback
+                    container.setWriteAcl "r:*", (err, container) ->
+                        return callback(err) if err
+                        container.reload(callback)
+                    return
+                "should update the acl": (err, container) ->
+                    assert.equal(container.writeAcl, "r:*")
                     
                  
 ).addBatch(

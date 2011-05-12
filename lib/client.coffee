@@ -102,7 +102,7 @@ class Client extends EventEmitter
         headers["X-Auth-Token"] = @storageToken
         headers["X-Storage-Token"] = @storageToken
         headers["User-Agent"] = "Javascript Open Stack API Client #{version}"
-        console.log("requesting: #{method}", uri)
+        #console.log("requesting: #{method}", uri)
         options =
             method: method
             uri: uri
@@ -120,10 +120,11 @@ class Client extends EventEmitter
         options.body = body if Utils.isString(body)            
         
         request = Request(options)
-        try
-            request.pipe(body) if body? and not Utils.isString(body)
-        catch error
-            callback(new Error.BadBodySpecified("a body was specified that was not a string or failed to pipe"))
+        if body? and not Utils.isString(body)
+            try
+                request.pipe(body) 
+            catch error
+                callback(new Error.BadBodySpecified("a body was specified that was not a string or failed to pipe"))
         return request
             
     _handleUnauthorizedRequest: (method, uri, body, headers, callback) =>

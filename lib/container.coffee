@@ -1,20 +1,6 @@
 StorageObject = require("./storage_object")
 Error = require("./errors")
 
-# def objects(params = {})
-# params[:marker] ||= params[:offset] unless params[:offset].nil?
-# query = []
-# params.each do |param, value|
-# if [:limit, :marker, :prefix, :path, :delimiter].include? param
-#   query << "#{param}=#{CloudFiles.escape(value.to_s)}"
-# end
-# end
-# response = self.connection.storage_request("GET", "#{escaped_name}?#{query.join '&'}")
-# return [] if (response.code == "204")
-# raise CloudFiles::Exception::InvalidResponse, "Invalid response code #{response.code}" unless (response.code == "200")
-# return CloudFiles.lines(response.body)
-# end
-
 class Container
     constructor: (@name, @client, response) ->
         @metadata = {}
@@ -67,6 +53,17 @@ class Container
             return callback(null, []) if response.statusCode == "204"
             callback(null, body.split("\n"))
         
+    setReadAcl: (str, callback) =>
+        headers = {"X-Container-Read": str}
+        @client.storageRequest "POST", @escapedName(), null, headers, (err, response) =>
+            return callback(err) if err
+            callback(null, this)
+            
+    setWriteAcl: (str, callback) =>
+        headers = {"X-Container-Write": str}
+        @client.storageRequest "POST", @escapedName(), null, headers, (err, response) =>
+            return callback(err) if err
+            callback(null, this)
     
     escapedName: =>
         escape(@name)
@@ -75,8 +72,8 @@ class Container
         headers = response.headers
         @bytes = new Number(headers["x-container-bytes-used"]) if headers["x-container-bytes-used"]?
         @count = new Number(headers["x-container-object-count"]) if headers["x-container-object-count"]?
-        @containerRead = headers["x-container-read"]
-        @containerWrite = headers["x-container-write"]
+        @readAcl = headers["x-container-read"]
+        @writeAcl = headers["x-container-write"]
         for own header, value of headers
             do (header, value) =>
                 if match = header.match(/^x-container-meta-(.+)/)
