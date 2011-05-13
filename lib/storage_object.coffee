@@ -1,16 +1,16 @@
-Client = require("./client")
-Container = require("./container")
-Utils = require('./utils')
-Error = require('./errors')
+Utils = require 'utils'
+Error = require 'errors'
 
-mime = require('mime')
+mime = require 'mime'
 
-fs = require("fs")
+fs = require "fs"
 
 class StorageObject
             
     constructor: (@name, @container, @client, response) ->
-        @container = new Container(@container, @client) if Utils.isString(@container)
+        if Utils.isString(@container)
+            Container = require "container"
+            @container = new Container(@container, @client) 
         @metadata = {}
         @bytes = 0
         @lastModified = new Date()

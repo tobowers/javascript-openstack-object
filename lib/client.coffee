@@ -1,4 +1,3 @@
-require.paths.unshift(require('path').join(__dirname, '.'))
 version = require "version"
 
 Request = require "request"

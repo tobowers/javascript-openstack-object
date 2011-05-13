@@ -10,6 +10,8 @@ testContainerName = "clientTestContainer"
 
 testCleaner = TestCleaner.initialize {containers: [testContainerName]}
 
+client = Storage.Client.create(goodCredentials)
+
 vows.describe('Client').addBatch(
     "test cleaner":
         topic: ->
@@ -17,6 +19,19 @@ vows.describe('Client').addBatch(
             return
         "should work": (err, result) ->
             assert.isNull(err)
+).addBatch(
+    "storage object from client":
+        topic: ->
+            client.storageObject("test", "test");
+        "should be a storage client": (object) ->
+            assert.instanceOf(object, Storage.StorageObject)
+    "container from client":
+        topic: ->
+            client.container("test")
+        "should be a container": (container) ->
+            assert.instanceOf(container, Storage.Container)
+        
+
 ).addBatch(
     "client initialization":
         topic: (topic) ->

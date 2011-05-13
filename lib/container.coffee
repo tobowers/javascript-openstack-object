@@ -1,5 +1,5 @@
-StorageObject = require("./storage_object")
-Error = require("./errors")
+StorageObject = require("storage_object")
+Error = require("errors")
 
 class Container
     constructor: (@name, @client, response) ->
@@ -87,7 +87,7 @@ class Container
         client.storageRequest "PUT", escape(name), null, null, (err, response) ->
             return callback(err) if err
             callback(null, new Container(name, client, response))
-            
+
 module.exports = Container
         
     
