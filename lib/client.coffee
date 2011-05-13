@@ -5,6 +5,7 @@ Request = require "request"
 url = require "url"
 EventEmitter = require("events").EventEmitter
 Container = require "container"
+StorageObject = require "storage_object"
 StorageError = require "errors"
 Utils = require 'utils'
 
@@ -84,6 +85,12 @@ class Client extends EventEmitter
         uri = path
         uri = @storageUrlFor(path) unless path[0] == "/"
         @queueOrMakeRequest(method, uri, body, headers, callback)
+        
+    container: (name) =>
+        new Container(name, this);
+        
+    storageObject: (container, name) =>
+        new StorageObject(name, container, this);
         
     getContainer: (name, callback, loadFromServer) =>
         loadFromServer ?= true

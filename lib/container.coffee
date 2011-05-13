@@ -31,6 +31,9 @@ class Container
             return callback(err) if err
             callback(null, this)
     
+    storageObject: (name) =>
+        new StorageObject(name, this, this.client)
+    
     createObject: (name, callback) =>
         StorageObject.create(name, this, callback)
     

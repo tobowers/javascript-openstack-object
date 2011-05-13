@@ -8,6 +8,6 @@
   "dependencies"  : {"coffee-script": "", "mime": ""},
   "main"          : "./lib/bootstrap",
   "directories"   : { "test": "./test" },
-  "version"       : "0.0.1",
+  "version"       : "0.0.2",
   "engines"       : {"node": ">=0.4.5"}
 }
