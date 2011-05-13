@@ -1,7 +1,7 @@
 vows = require 'vows'
 assert = require 'assert'
 
-Storage = require './../lib/main'
+Storage = require './../index'
 
 goodCredentials = require('./credentials').good
 badCredentials = require("./credentials").bad

@@ -1,6 +1,6 @@
 vows = require 'vows'
 assert = require 'assert'
-Storage = require './../lib/main'
+Storage = require './../index'
 TestCleaner = require './test_cleaner'
 Path = require 'path'
 fs = require 'fs'

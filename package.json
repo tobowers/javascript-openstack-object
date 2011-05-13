@@ -6,8 +6,8 @@
   "author"        : "Topper Bowers <topper@toppingdesign.com>",
   "contributors"  : [],
   "dependencies"  : {"coffee-script": "", "mime": ""},
-  "main"          : "./lib/bootstrap",
+  "main"          : "./index.js",
   "directories"   : { "test": "./test" },
-  "version"       : "0.0.3",
+  "version"       : "0.0.4",
   "engines"       : {"node": ">=0.4.5"}
 }
