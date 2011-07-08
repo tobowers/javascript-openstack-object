@@ -128,7 +128,7 @@ class Client extends EventEmitter
         request = Request(options)
         if body? and not Utils.isString(body)
             try
-                request.pipe(body) 
+                body.pipe(request)
             catch error
                 callback(new Error.BadBodySpecified("a body was specified that was not a string or failed to pipe"))
         return request
